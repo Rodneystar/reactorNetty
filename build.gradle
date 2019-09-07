@@ -8,6 +8,8 @@
     id 'java'
 }
 
+targetCompatibility = '10'
+sourceCompatibility = '10'
 
 repositories{
     mavenCentral()

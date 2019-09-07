@@ -51,8 +51,9 @@ public class ServerTests {
         
         PrintWriter out = new PrintWriter(sock.getOutputStream(), true );
         
-        Flux.interval(Duration.ofNanos(200) ).take(Duration.ofSeconds(5)).subscribe((i ) -> {
-            out.println("hello world");
+        Flux.interval(Duration.ofNanos(200) ).take(Duration.ofSeconds(5))
+        .subscribe((i ) -> {
+            out.println("hello worlds");
         });
 
         
