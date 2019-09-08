@@ -36,8 +36,38 @@ public class ServerTests {
         PrintWriter out = new PrintWriter(sock.getOutputStream(), true );
         out.println("hello world");
         
+        Thread.sleep(1000000);
         sock.close();
-        // Thread.sleep(1000);
+    }
+    @Test
+    public void testLargeLine() throws UnknownHostException, IOException, InterruptedException {
+        int testPort = 9000;
+        DisposableServer server = s.startServer(testPort);
+         
+        System.out.println(server.isDisposed());
+        Socket sock = new Socket("localhost", testPort);
+     
+        
+        PrintWriter out = new PrintWriter(sock.getOutputStream(), true );
+        
+        // Flux.interval(Duration.ofMillis(100) ).take(Duration.ofSeconds(2))
+        // .subscribe((i ) -> {
+            // if(i%2 == 0) {
+                out.println("hello there");
+            // } else {
+                out.println("hello worldsapsdifjpaiejpafi jsbpaisej pfiasjpijsepaifjpesiajfpioasdjfpaisjdfpaisjepfiajfpisaejfpaisf" + 
+                "iopsajfpaisehucnasdiopajfpsiedfjdpeasijpeijfpasiefjpasdiufjbipasixcmpaisjd\ncpasjfpeifjapsoiejfpaismcpaisjfepajsp");
+                Thread.sleep(1000);
+                System.out.println("closed: " + sock.isClosed() + " connected: " + sock.isConnected() + " in shut down: " 
+                    + sock.isInputShutdown() + " out shut down: " + sock.isOutputShutdown());
+                out.println("hello there");
+             
+            // }
+        // });
+
+        
+        Thread.sleep(1000);
+
     }
 
     @Test
@@ -51,16 +81,13 @@ public class ServerTests {
         
         PrintWriter out = new PrintWriter(sock.getOutputStream(), true );
         
-        Flux.interval(Duration.ofNanos(200) ).take(Duration.ofSeconds(5))
+        Flux.interval(Duration.ofNanos(200) ).take(Duration.ofSeconds(2))
         .subscribe((i ) -> {
             out.println("hello worlds");
         });
 
         
-        
-        Thread.sleep(5000);
-        sock.close();
-
+        Thread.sleep(1000);
 
     }
   

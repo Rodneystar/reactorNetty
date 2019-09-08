@@ -1,13 +1,18 @@
 
 import reactor.netty.tcp.TcpServer;
 
+import java.io.ObjectOutputStream;
+import java.net.Inet4Address;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -26,6 +31,7 @@ public class Server {
     CountDownLatch latch = new CountDownLatch(1);
 
     DefaultService service = new DefaultService();
+
     public void testout() {
         System.out.println("we are printing");
     }
@@ -34,36 +40,46 @@ public class Server {
         AtomicBoolean shutdown = new AtomicBoolean();
         AtomicInteger count = new AtomicInteger(0);
 
-        DisposableServer server = TcpServer.create().host("localhost").port(port)
+        DisposableServer server = 
+        TcpServer.create()
+                .host("localhost")
+                .port(port)
                 .handle((NettyInbound in, NettyOutbound out) -> {
-                    Flux<String> linesIn = in.withConnection(conn -> {
-                        conn.addHandlerLast("codec", new LineBasedFrameDecoder(8 * 1024));
-                        conn.addHandlerLast("tacIp", new ChannelInboundHandlerAdapter() {
-                            @Override
-                            public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-                                ByteBuf oMsg;
-                                if(msg instanceof ByteBuf) {
-                                    oMsg = (ByteBuf) msg;
-                                    int newCapacity = oMsg.capacity() + 32;
-                                    oMsg.capacity(newCapacity);
-                                    oMsg.writeBytes(conn.address().getAddress().getAddress());
-                                    ctx.fireChannelRead(oMsg);
-                                } else {
-                                    ctx.fireChannelRead(msg);
-                                }
-                            }
-                        });
-                    })
+                    Flux<MessageWithSender> linesIn = 
+                    in.withConnection(conn -> {
+                        conn.addHandlerLast(new LineBasedFrameDecoder(152));
+                        conn.addHandlerLast("tacIp", new AddressContextHandlerAdapter(conn.address().getAddress().getAddress()));
+                        conn.addHandlerLast(new CatchingLineBasedFrameDecoder());
+                    })   
                     .receive()
-                    .asString()
+                    // .onErrorContinue((p, m) -> {
+                    //     System.out.println("error: " + p.getMessage());
+                    // })
+                    .map(bb -> {
+                        InetAddress a = readAddress(bb);
+                        return new MessageWithSender(bb.readBytes(bb.readableBytes()), a);})
                     .subscribeOn(Schedulers.parallel());
                   
                     service.persist(linesIn, out);
-                    
                     return Mono.never();
                 }).bindNow();
 
         return server;
     }
 
+    private InetAddress readAddress(ByteBuf fullMessage) {
+        
+        // InetAddress a = Inet4Address.getByAddress("unknown", new byte[]{123,123,123,123});
+        InetAddress a = InetAddress.getLoopbackAddress();
+
+        try {
+            byte[] addBytes = new byte[4];
+            fullMessage.readBytes(addBytes);
+            a = Inet4Address.getByAddress(addBytes);
+        } catch (UnknownHostException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        return a;
+    }
 }
