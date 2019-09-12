@@ -1,3 +1,4 @@
+package com.jdog;
 import java.io.IOException;
 import java.net.Inet4Address;
 import java.net.InetAddress;
@@ -15,7 +16,7 @@ public class DefaultService {
     AtomicInteger count = new AtomicInteger(0);
     public void persist(Flux<MessageWithSender> line, NettyOutbound out) {
         line.onErrorContinue((error, msg) -> {
-            System.out.println("error here");
+            System.out.println("error here: " + error.getMessage());
         })
         .subscribe((l) -> {
             tryReadbytes(l);

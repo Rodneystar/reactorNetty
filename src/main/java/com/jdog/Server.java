@@ -1,4 +1,5 @@
 
+package com.jdog;
 import reactor.netty.tcp.TcpServer;
 
 import java.io.ObjectOutputStream;
@@ -10,6 +11,7 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
@@ -18,7 +20,9 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.LineBasedFrameDecoder;
+import io.netty.handler.codec.TooLongFrameException;
 import io.netty.handler.codec.json.JsonObjectDecoder;
+import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
@@ -36,30 +40,31 @@ public class Server {
         System.out.println("we are printing");
     }
 
+    Consumer<?> propagateErrors = ob -> {
+        if (ob instanceof TooLongFrameException) {
+            Exceptions.propagate((Error) ob);
+        }
+    };
+
     public DisposableServer startServer(int port) {
         AtomicBoolean shutdown = new AtomicBoolean();
         AtomicInteger count = new AtomicInteger(0);
 
-        DisposableServer server = 
-        TcpServer.create()
-                .host("localhost")
-                .port(port)
+        DisposableServer server = TcpServer.create().host("localhost").port(port)
                 .handle((NettyInbound in, NettyOutbound out) -> {
-                    Flux<MessageWithSender> linesIn = 
-                    in.withConnection(conn -> {
+
+                    Flux<MessageWithSender> linesIn = in.withConnection(conn -> {
                         conn.addHandlerLast(new LineBasedFrameDecoder(152));
-                        conn.addHandlerLast("tacIp", new AddressContextHandlerAdapter(conn.address().getAddress().getAddress()));
+                        conn.addHandlerLast("tacIp", new AddressContextHandlerAdapter(conn.address().getAddress()));
                         conn.addHandlerLast(new CatchingLineBasedFrameDecoder());
-                    })   
-                    .receive()
-                    // .onErrorContinue((p, m) -> {
-                    //     System.out.println("error: " + p.getMessage());
-                    // })
-                    .map(bb -> {
-                        InetAddress a = readAddress(bb);
-                        return new MessageWithSender(bb.readBytes(bb.readableBytes()), a);})
-                    .subscribeOn(Schedulers.parallel());
-                  
+                    }).receiveObject().map(mws -> {
+                        if (mws instanceof TooLongFrameException) {
+                            throw Exceptions.propagate((TooLongFrameException) mws);
+                        } else {
+                            return (MessageWithSender) mws;
+                        }
+                    }).subscribeOn(Schedulers.parallel());
+
                     service.persist(linesIn, out);
                     return Mono.never();
                 }).bindNow();
@@ -68,8 +73,9 @@ public class Server {
     }
 
     private InetAddress readAddress(ByteBuf fullMessage) {
-        
-        // InetAddress a = Inet4Address.getByAddress("unknown", new byte[]{123,123,123,123});
+
+        // InetAddress a = Inet4Address.getByAddress("unknown", new
+        // byte[]{123,123,123,123});
         InetAddress a = InetAddress.getLoopbackAddress();
 
         try {

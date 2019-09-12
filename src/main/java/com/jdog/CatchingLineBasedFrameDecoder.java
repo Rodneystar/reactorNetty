@@ -1,3 +1,4 @@
+package com.jdog;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.LineBasedFrameDecoder;
@@ -11,11 +12,7 @@ public class CatchingLineBasedFrameDecoder extends ChannelInboundHandlerAdapter 
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) 
         throws Exception {
 
+            ctx.fireChannelRead(cause);
             
-            if(cause instanceof TooLongFrameException) {
-                ctx.fireChannelRead("errorhappened".getBytes());
-            } else {
-                ctx.fireExceptionCaught(Exceptions.propagate(cause));
-            }
     }
 }
