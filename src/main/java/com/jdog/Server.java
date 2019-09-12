@@ -50,7 +50,7 @@ public class Server {
         AtomicBoolean shutdown = new AtomicBoolean();
         AtomicInteger count = new AtomicInteger(0);
 
-        DisposableServer server = TcpServer.create().host("localhost").port(port)
+        DisposableServer server = TcpServer.create().port(port)
                 .handle((NettyInbound in, NettyOutbound out) -> {
 
                     Flux<MessageWithSender> linesIn = in.withConnection(conn -> {
