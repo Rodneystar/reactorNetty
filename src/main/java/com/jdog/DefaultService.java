@@ -11,7 +11,7 @@ import io.netty.channel.ChannelHandler;
 import reactor.core.publisher.Flux;
 import reactor.netty.NettyOutbound;
 
-public class DefaultService {
+public class DefaultService implements CdrService{
 
     AtomicInteger count = new AtomicInteger(0);
     public void persist(Flux<MessageWithSender> line, NettyOutbound out) {
