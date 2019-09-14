@@ -12,4 +12,11 @@ public class MessageWithSender {
         this.message = (ByteBuf)message;
         this.sender = sender;
     }
+
+
+    public String asString() {
+        String msgStr = this.message.toString(java.nio.charset.Charset.defaultCharset());
+        return String.format("%s, %s", sender.getHostAddress(), msgStr);
+    }
+    
 }

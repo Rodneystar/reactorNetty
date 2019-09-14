@@ -31,6 +31,8 @@ repositories{
 
 dependencies {
     compile group: 'io.projectreactor.netty', name: 'reactor-netty', version: '0.8.11.RELEASE'
+    compile "io.projectreactor.kafka:reactor-kafka:1.1.1.RELEASE"
+    testCompile "org.mockito:mockito-core:2.+"
     testCompile 'junit:junit:4.+'
     testCompile 'io.projectreactor:reactor-test:3.2.12.RELEASE'
 }

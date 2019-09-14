@@ -34,7 +34,7 @@ public class Server {
 
     CountDownLatch latch = new CountDownLatch(1);
 
-    DefaultService service = new DefaultService();
+    CdrService service;
 
     public void testout() {
         System.out.println("we are printing");
@@ -46,7 +46,8 @@ public class Server {
         }
     };
 
-    public DisposableServer startServer(int port) {
+    public DisposableServer startServer(int port, CdrService service) {
+        this.service = service;
         AtomicBoolean shutdown = new AtomicBoolean();
         AtomicInteger count = new AtomicInteger(0);
 
