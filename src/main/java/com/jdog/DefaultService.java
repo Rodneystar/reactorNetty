@@ -1,4 +1,6 @@
+
 package com.jdog;
+
 import java.io.IOException;
 import java.net.Inet4Address;
 import java.net.InetAddress;
@@ -9,20 +11,25 @@ import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.ByteBufOutputStream;
 import io.netty.channel.ChannelHandler;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 import reactor.netty.NettyOutbound;
+import reactor.netty.NettyPipeline;
 
 public class DefaultService implements CdrService{
 
     AtomicInteger count = new AtomicInteger(0);
     public void persist(Flux<MessageWithSender> line, NettyOutbound out) {
+        
         line.onErrorContinue((error, msg) -> {
             System.out.println("error here: " + error.getMessage());
         })
-        .subscribe((l) -> {
-            tryReadbytes(l);
-        }, (error) -> {
-            error.printStackTrace();
-        });
+        .subscribe( 
+            next -> {
+                out.options(NettyPipeline.SendOptions::flushOnEach)
+                    .sendString(Mono.just("hi"));                
+                tryReadbytes(next);
+            }, 
+            error -> error.printStackTrace());
     }
 
     private void tryReadbytes(MessageWithSender l) {

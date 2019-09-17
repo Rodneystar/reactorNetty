@@ -12,6 +12,8 @@ public class AddressContextHandlerAdapter extends ChannelInboundHandlerAdapter {
     public AddressContextHandlerAdapter(InetAddress address){
         this.address = address;
     }
+
+    
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         // ByteBuf oMsg = ctx.alloc().buffer();

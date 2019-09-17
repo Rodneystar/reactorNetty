@@ -1,5 +1,6 @@
 
 package com.jdog;
+
 import reactor.netty.tcp.TcpServer;
 
 import java.io.ObjectOutputStream;
@@ -7,6 +8,7 @@ import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
+import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -23,6 +25,7 @@ import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.handler.codec.json.JsonObjectDecoder;
 import reactor.core.Exceptions;
+import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
@@ -53,21 +56,30 @@ public class Server {
 
         DisposableServer server = TcpServer.create().port(port)
                 .handle((NettyInbound in, NettyOutbound out) -> {
+                    
+                    EmitterProcessor<MessageWithSender> sensorDataProcessor = EmitterProcessor.create();
 
-                    Flux<MessageWithSender> linesIn = in.withConnection(conn -> {
+
+                    in.withConnection(conn -> {
                         conn.addHandlerLast(new LineBasedFrameDecoder(152));
-                        conn.addHandlerLast("tacIp", new AddressContextHandlerAdapter(conn.address().getAddress()));
+                        conn.addHandlerLast("tacIp",
+                                new AddressContextHandlerAdapter(conn.address().getAddress()));
                         conn.addHandlerLast(new CatchingLineBasedFrameDecoder());
                     }).receiveObject().map(mws -> {
                         if (mws instanceof TooLongFrameException) {
                             throw Exceptions.propagate((TooLongFrameException) mws);
-                        } else {
+                        }
+                        else {
                             return (MessageWithSender) mws;
                         }
-                    }).subscribeOn(Schedulers.parallel());
+                    }).subscribeOn(Schedulers.parallel()).doOnNext(s -> {
+                        System.out.println("we are in the doonnext" + s.asString() );
+                    }).subscribe(sensorDataProcessor);
+                   
 
-                    service.persist(linesIn, out);
-                    return Mono.never();
+
+                    // service.persist(linesIn, out);
+                    return  out.sendString(sensorDataProcessor.map( e -> e.asString()+ System.lineSeparator()));
                 }).bindNow();
 
         return server;
