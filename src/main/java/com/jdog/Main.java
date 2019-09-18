@@ -11,6 +11,13 @@ public class Main {
         this.env = env;
     }
 
+    
+    public DisposableServer runAsync() {
+        System.out.println("starting up... ");
+
+        return server.startServer(9000, getService());
+    }
+
     public void run() {
         System.out.println("starting up... ");
 

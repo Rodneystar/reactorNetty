@@ -60,29 +60,38 @@ public class Server {
                     EmitterProcessor<MessageWithSender> sensorDataProcessor = EmitterProcessor.create();
 
 
-                    in.withConnection(conn -> {
+                    Flux<MessageWithSender> influx = in.withConnection(conn -> {
                         conn.addHandlerLast(new LineBasedFrameDecoder(152));
                         conn.addHandlerLast("tacIp",
                                 new AddressContextHandlerAdapter(conn.address().getAddress()));
                         conn.addHandlerLast(new CatchingLineBasedFrameDecoder());
-                    }).receiveObject().map(mws -> {
+                    })
+                    .receiveObject().map(mws -> {
                         if (mws instanceof TooLongFrameException) {
                             throw Exceptions.propagate((TooLongFrameException) mws);
                         }
                         else {
                             return (MessageWithSender) mws;
                         }
-                    }).subscribeOn(Schedulers.parallel()).doOnNext(s -> {
-                        System.out.println("we are in the doonnext" + s.asString() );
-                    }).subscribe(sensorDataProcessor);
+                    })
+                    .onErrorContinue( (e, mws) -> System.out.println("removed error"))
+                    .subscribeOn(Schedulers.parallel());
+                
                    
 
 
                     // service.persist(linesIn, out);
-                    return  out.sendString(sensorDataProcessor.map( e -> e.asString()+ System.lineSeparator()));
+                    return  out.sendString(service(influx)).then();
                 }).bindNow();
 
         return server;
+    }
+
+    Flux<String> service(Flux<MessageWithSender> in) {
+        return in.flatMap( mws -> {
+            System.out.println(mws.asString());
+            return Flux.just("reply\n");
+        });
     }
 
     private InetAddress readAddress(ByteBuf fullMessage) {
